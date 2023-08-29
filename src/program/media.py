@@ -1,5 +1,8 @@
+"""MediaItem module"""
+
+
 class MediaItem:
-    '''MediaItem class'''
+    """MediaItem class"""
 
     STATE_UNKNOWN = -1
     STATE_IN_LIBRARY = 0
@@ -16,7 +19,7 @@ class MediaItem:
             self.imdb_id = item["imdb_id"]
 
     def __eq__(self, other):
-        #TODO for shows and episodes
+        # TODO for shows and episodes
         return self.title == other.title and self.type == other.type
 
     def __iter__(self):

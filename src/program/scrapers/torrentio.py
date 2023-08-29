@@ -1,4 +1,4 @@
-''' Torrentio scraper module '''
+""" Torrentio scraper module """
 from program.media import MediaItem
 from utils.logger import logger
 from utils.request import get
@@ -6,7 +6,8 @@ from settings.manager import settings_manager
 
 
 class Scraper:
-    ''' Scraper for torrentio '''
+    """Scraper for torrentio"""
+
     def __init__(self):
         self.settings = "scraper_torrentio"
         self.class_settings = settings_manager.get(self.settings)

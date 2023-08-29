@@ -38,4 +38,4 @@ class Content:
                 media_items.append(final_item)
         logger.debug("Added %s items to be scraped and downloaded", added_items)
 
-    #TODO Implement more mdblist api methods here
+    # TODO Implement more mdblist api methods here

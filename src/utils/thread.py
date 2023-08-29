@@ -1,9 +1,11 @@
-'''Threading helper'''
+"""Threading helper"""
 import threading
 import time
 
+
 class ThreadRunner:
-    '''Thread runner'''
+    """Thread runner"""
+
     def __init__(self, target_method, args=None, run_interval=30):
         self.target_method = target_method
         self.args = args
@@ -20,18 +22,18 @@ class ThreadRunner:
             time.sleep(self.run_interval)
 
     def start(self):
-        '''Starts the thread'''
+        """Starts the thread"""
         if not self.is_running:
             self.is_running = True
             self.thread = threading.Thread(target=self._run_thread, args=(self.args,))
             self.thread.start()
 
     def stop(self):
-        '''Stops the thread'''
+        """Stops the thread"""
         self.is_running = False
         if self.thread:
             self.thread.join()
 
     def join(self):
-        '''Joins the thread'''
+        """Joins the thread"""
         return self.thread.join()
