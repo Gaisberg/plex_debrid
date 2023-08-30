@@ -8,7 +8,7 @@ from utils.thread import ThreadRunner
 
 if __name__ == "__main__":
     program = Program(settings_manager)
-    runner = ThreadRunner(program.run)
+    runner = ThreadRunner(program.run, run_interval=5)
     runner.start()
 
     try:

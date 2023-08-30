@@ -1,1 +1,3 @@
 Requests==2.31.0
+ratelimit==2.2.1
+xmltodict==0.13.0

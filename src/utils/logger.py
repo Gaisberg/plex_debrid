@@ -19,10 +19,12 @@ class Logger(logging.Logger):
 
         file_handler = logging.FileHandler(os.path.join("logs", file_name))
         file_handler.setLevel(logging.DEBUG)
+        # if settings_manager.get("debug"):
+        #     file_handler.setLevel(logging.DEBUG)
         file_handler.setFormatter(formatter)
 
         console_handler = logging.StreamHandler()
-        console_handler.setLevel(logging.INFO)
+        console_handler.setLevel(logging.DEBUG)
         console_handler.setFormatter(formatter)
 
         self.addHandler(file_handler)

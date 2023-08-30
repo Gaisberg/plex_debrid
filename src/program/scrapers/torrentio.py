@@ -1,5 +1,6 @@
 """ Torrentio scraper module """
-from program.media import MediaItem
+from ratelimit import limits
+from program.media import MediaItem, MediaItemContainer, MediaItemState
 from utils.logger import logger
 from utils.request import get
 from settings.manager import settings_manager
@@ -12,34 +13,38 @@ class Scraper:
         self.settings = "scraper_torrentio"
         self.class_settings = settings_manager.get(self.settings)
 
-    def scrape(self, media_items):
+    def scrape(self, media_items: MediaItemContainer):
         """Scrape the torrentio site for the given media items
         and update the object with scraped streams"""
         scraped_amount = 0
-        if scraped_amount >= 100:
-            return
+        filters = f'sort=qualitysize%7Cqualityfilter={self.class_settings["filter"]}'
         for item in media_items:
-            if item.state == MediaItem.STATE_IN_CONTENT_SERVICE:
-                item_type = item.type
-                if item.type == "show":
-                    item_type = "series"
-                    continue
-                filters = (
-                    f'sort=qualitysize%7Cqualityfilter={self.class_settings["filter"]}'
-                )
-                url = str(
-                    f"https://torrentio.strem.fun/{filters}"
-                    + f"/stream/{item_type}/{item.imdb_id}.json"
-                )
-                scraped_amount += 1
-                response = get(url)
+            if (
+                item.state == MediaItemState.CONTENT
+                and item.scrape_tries <= 5
+                and item.type == "movie"
+            ):
+                response = self.api_scrape(item, filters)
                 if not response:
-                    logger.debug("Hit request cap, lets try again next cycle")
+                    # logger.debug("Hit request cap, lets try again next cycle")
                     break
-                streams_amount = len(response["streams"])
-                if streams_amount > 0:
-                    item.streams = response["streams"]
-                    item.state = MediaItem.STATE_SCRAPED
-                    logger.debug("Found %s streams for %s", streams_amount, item.title)
+                streams = response["streams"]
+                if len(streams) > 0:
+                    item.streams = streams
+                    item.change_state(MediaItemState.SCRAPED)
+                    scraped_amount += 1
+                    logger.debug("Found %s streams for %s", len(streams), item.title)
                 else:
                     logger.debug("Could not find scraped streams for %s", item.title)
+        if scraped_amount > 0:
+            logger.info("Scraped %s streams", scraped_amount)
+
+    @limits(calls=1, period=1, raise_on_limit=False)
+    def api_scrape(self, item: MediaItem, filters: str):
+        """Wrapper for torrentio scrape method"""
+        response = get(
+            f"https://torrentio.strem.fun/{filters}"
+            + f"/stream/{item.type}/{item.imdb_id}.json"
+        )
+        item.scrape_tries += 1
+        return response

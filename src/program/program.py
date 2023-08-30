@@ -3,7 +3,7 @@ import importlib
 import inspect
 import os
 import sys
-
+from program import media
 from utils.logger import logger
 
 
@@ -12,7 +12,7 @@ class Program:
 
     def __init__(self, settings):
         self.settings = settings
-        self.media_items = []
+        self.media_items = media.MediaItemContainer()
         self.library_services = self.__import_modules("src/program/libraries")
         self.content_services = self.__import_modules("src/program/content")
         self.scraping_services = self.__import_modules("src/program/scrapers")
@@ -20,7 +20,7 @@ class Program:
 
     def run(self):
         """Run the program"""
-        # Update libraries
+        # Update libraries - Lets focus on plex and not care about other services
         for library in self.library_services:
             library.update_items(self.media_items)
         # Update content lists
@@ -32,6 +32,10 @@ class Program:
         # Download media items - We dont really need more services, but thats for another day
         for debrid in self.debrid_services:
             debrid.download(self.media_items)
+        # Update library sections and item metadatas
+        for library in self.library_services:
+            library.update_sections(self.media_items)
+            library.update_metadata_for_items(self.media_items)
 
     def __import_modules(self, folder_path: str) -> list[object]:
         file_list = [

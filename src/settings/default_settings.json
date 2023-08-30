@@ -10,9 +10,9 @@
         "address": ""
     },
     "content_mdblist": {
-        "lists": {
-            "" : ""
-        },
+        "lists": [
+            ""
+        ],
         "api_key" : ""
     },
     "scraper_torrentio" : {
