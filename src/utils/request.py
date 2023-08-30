@@ -5,7 +5,7 @@ import xmltodict
 from utils.logger import logger
 
 
-def get(url: str, timeout=5, additional_headers=None) -> json:
+def get(url: str, timeout=5, additional_headers=None) -> dict:
     """Requests get wrapper"""
     session = requests.Session()
     headers = {"Content-Type": "application/json", "Accept": "application/json"}
@@ -15,24 +15,23 @@ def get(url: str, timeout=5, additional_headers=None) -> json:
     return _handle_response(response)
 
 
-def post(url, data: dict, timeout=5, additional_headers=None):
+def post(url, data: dict, timeout=5, additional_headers=None) -> dict:
     """Requests post wrapper"""
     session = requests.Session()
     response = session.post(url, headers=additional_headers, data=data, timeout=timeout)
     return _handle_response(response)
 
 
-def put(url, timeout=5, additional_headers=None):
+def put(url, data: dict = None, timeout=5, additional_headers=None) -> dict:
     """Requests put wrapper"""
     session = requests.Session()
-    response = session.put(url, headers=additional_headers, timeout=timeout)
+    response = session.put(url, data=data, headers=additional_headers, timeout=timeout)
     if not response.ok:
         logger.warning("Error: %s %s", response.status_code, response.content)
-
     return _handle_response(response)
 
 
-def _handle_response(response: requests.Response) -> json:
+def _handle_response(response: requests.Response) -> dict:
     if not response.ok:
         logger.warning("Error: %s %s", response.status_code, response.content)
         response = None

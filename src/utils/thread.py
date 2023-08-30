@@ -16,7 +16,7 @@ class ThreadRunner:
     def _run_thread(self, args=None):
         while self.is_running:
             if args:
-                self.target_method(*args)
+                self.target_method()
             else:
                 self.target_method()
             time.sleep(self.run_interval)

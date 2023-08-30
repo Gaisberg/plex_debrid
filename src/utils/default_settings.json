@@ -15,6 +15,10 @@
         ],
         "api_key" : ""
     },
+    "content_overseerr": {
+        "url" : "",
+        "api_key" : ""
+    },
     "scraper_torrentio" : {
         "filter" : "480p,scr,cam"
     },

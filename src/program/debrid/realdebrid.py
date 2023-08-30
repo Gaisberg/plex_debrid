@@ -2,7 +2,7 @@
 from program.media import MediaItem, MediaItemContainer, MediaItemState
 from utils.logger import logger
 from utils.request import get, post
-from settings.manager import settings_manager
+from utils.settings import settings_manager
 
 WANTED_FORMATS = ["mkv", "mp4"]
 
@@ -27,7 +27,7 @@ class Debrid:
                     self.select_files(request_id, item)
                     item.change_state(MediaItemState.DOWNLOADING)
                     added_files += 1
-                    logger.debug("Adding cached release for %s", item.title)
+
         if added_files > 0:
             logger.info("Downloaded %s cached releases", added_files)
 
@@ -52,7 +52,7 @@ class Debrid:
                             ),
                             None,
                         )
-                        if files:
+                        if files and len(files) == 1:
                             stream["files"] = files
                             media_item.streams = stream
                             return True

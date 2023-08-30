@@ -68,6 +68,11 @@ class MediaItemContainer:
                 self.items.append(item)
         return self
 
+    def update(self, other: MediaItem):
+        for item in self.items:
+            if item == other:
+                item = other
+
     def count(self, state) -> int:
         """Count items with given state in container"""
         return len([item for item in self.items if item.state == state])

@@ -3,7 +3,7 @@ from ratelimit import limits
 from program.media import MediaItem, MediaItemContainer, MediaItemState
 from utils.logger import logger
 from utils.request import get
-from settings.manager import settings_manager
+from utils.settings import settings_manager
 
 
 class Scraper:

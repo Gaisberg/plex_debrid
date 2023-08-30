@@ -1,6 +1,6 @@
 """Mdblist content module"""
 from program.media import MediaItem, MediaItemContainer, MediaItemState
-from settings.manager import settings_manager
+from utils.settings import settings_manager
 from utils.logger import logger
 from utils.request import get
 

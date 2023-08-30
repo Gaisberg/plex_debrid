@@ -2,7 +2,7 @@
 from program.media import MediaItem, MediaItemContainer, MediaItemState
 from utils.logger import logger
 from utils.request import get, put
-from settings.manager import settings_manager as settings
+from utils.settings import settings_manager as settings
 
 
 class Library:
@@ -23,6 +23,10 @@ class Library:
                 if fetched_item not in media_items:
                     media_items.append(fetched_item)
                     added_items += 1
+                else:
+                    existing_items = [item for item in media_items if item == fetched_item and item.state != fetched_item.state]
+                    for item in existing_items:
+                        media_items.update(item)
 
         if added_items > 0:
             logger.info("Found %s new items", added_items)

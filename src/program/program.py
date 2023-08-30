@@ -10,8 +10,7 @@ from utils.logger import logger
 class Program:
     """Program class"""
 
-    def __init__(self, settings):
-        self.settings = settings
+    def __init__(self):
         self.media_items = media.MediaItemContainer()
         self.library_services = self.__import_modules("src/program/libraries")
         self.content_services = self.__import_modules("src/program/content")

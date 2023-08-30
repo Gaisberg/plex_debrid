@@ -43,7 +43,6 @@ class SettingsManager:
         """Save settings to file"""
         with open(self.filename, "w", encoding="utf-8") as file:
             json.dump(self.settings, file, indent=4)
-
         logger.debug("Settings saved to %s", self.filename)
 
     def get(self, key):
