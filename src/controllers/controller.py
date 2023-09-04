@@ -1,5 +1,7 @@
 """ Program controller """
-from flask import Blueprint
+from flask import Blueprint, request
+
+from program.media import MediaItemState
 
 
 class ProgramController(Blueprint):
@@ -12,11 +14,23 @@ class ProgramController(Blueprint):
         self.register_blueprint(self.ContentController(self.program.content_services))
         # self.register_blueprint(self.ScrapingController(self.program.scraping_instances))
         # self.register_blueprint(self.DebridController(self.program.debrid_instances))
-        self.add_url_rule("/states", methods=["GET"], view_func=self.get_all_items)
+        self.add_url_rule("/items", methods=["GET"], view_func=self.get_items)
+        self.add_url_rule("/states", methods=["GET"], view_func=self.get_states)
 
-    def get_all_items(self):
-        """Get all media items"""
-        return self.program.media_items.items
+    def get_items(self):
+        """items endpoint"""
+        media_items = self.program.media_items
+        state = request.args.get("state")
+
+        if state:
+            items = [item for item in media_items if item.state.name == state]
+        else:
+            items = media_items.items
+        return items
+
+    def get_states(self):
+        """states endpoint"""
+        return [state.name for state in MediaItemState]
 
     class PlexController(Blueprint):
         """Plex controller blueprint"""

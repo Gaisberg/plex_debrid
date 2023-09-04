@@ -37,7 +37,7 @@ def get(url: str, timeout=10, additional_headers=None) -> ResponseObject:
     try:
         response = session.get(url, headers=headers, timeout=timeout)
     except:
-        pass
+        response = {"is_ok": False, "data": None}
     return ResponseObject(response)
 
 
@@ -49,7 +49,7 @@ def post(url, data: dict, timeout=10, additional_headers=None) -> ResponseObject
             url, headers=additional_headers, data=data, timeout=timeout
         )
     except:
-        pass
+        response = {"is_ok": False, "data": None}
     return ResponseObject(response)
 
 
@@ -61,5 +61,5 @@ def put(url, data: dict = None, timeout=10, additional_headers=None) -> Response
             url, data=data, headers=additional_headers, timeout=timeout
         )
     except:
-        pass
+        response = {"is_ok": False, "data": None}
     return ResponseObject(response)
