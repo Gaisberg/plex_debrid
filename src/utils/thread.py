@@ -6,17 +6,17 @@ import time
 class ThreadRunner:
     """Thread runner"""
 
-    def __init__(self, target_method, args=None, run_interval=30):
+    def __init__(self, target_method, run_interval=30, *args):
         self.target_method = target_method
         self.args = args
         self.run_interval = run_interval  # in seconds
         self.is_running = False
         self.thread = None
 
-    def _run_thread(self, args=None):
+    def _run_thread(self, args):
         while self.is_running:
             if args:
-                self.target_method()
+                self.target_method(args)
             else:
                 self.target_method()
             time.sleep(self.run_interval)

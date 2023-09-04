@@ -3,38 +3,42 @@ import importlib
 import inspect
 import os
 import sys
-from program import media
 from utils.logger import logger
+from program.media import MediaItemContainer
+from program.libraries.plex import Library as Plex
+from program.updaters.trakt import Updater as Trakt
 
 
 class Program:
     """Program class"""
 
     def __init__(self):
-        self.media_items = media.MediaItemContainer()
-        self.library_services = self.__import_modules("src/program/libraries")
+        self.plex = Plex()
+        self.trakt = Trakt()
+
+        self.media_items = MediaItemContainer()
+
         self.content_services = self.__import_modules("src/program/content")
         self.scraping_services = self.__import_modules("src/program/scrapers")
         self.debrid_services = self.__import_modules("src/program/debrid")
 
     def run(self):
         """Run the program"""
-        # Update libraries - Lets focus on plex and not care about other services
-        for library in self.library_services:
-            library.update_items(self.media_items)
+        self.plex.update_sections(self.media_items)
+        self.plex.update_metadata_for_items(self.media_items)
+        self.plex.get_new_items(self.media_items)
+
         # Update content lists
         for content_service in self.content_services:
             content_service.update_items(self.media_items)
-        # Scrape media items
+
+        self.plex.match_items(self.media_items)
+        self.trakt.update_items(self.media_items)
+
         for scraper in self.scraping_services:
             scraper.scrape(self.media_items)
-        # Download media items - We dont really need more services, but thats for another day
         for debrid in self.debrid_services:
             debrid.download(self.media_items)
-        # Update library sections and item metadatas
-        for library in self.library_services:
-            library.update_sections(self.media_items)
-            library.update_metadata_for_items(self.media_items)
 
     def __import_modules(self, folder_path: str) -> list[object]:
         file_list = [
@@ -50,27 +54,27 @@ class Program:
             )
             sys.modules[module_name] = module
             clsmembers = inspect.getmembers(module, inspect.isclass)
-            wanted_classes = ["Library", "Content", "Scraper", "Debrid"]
+            wanted_classes = ["Library", "Content", "Updater", "Scraper", "Debrid"]
             for name, obj in clsmembers:
                 if name in wanted_classes:
                     module = obj()
                     try:
-                        self._setup(module)
+                        # self._setup(module)
                         modules.append(module)
                     except TypeError as exception:
                         logger.error(exception)
                         raise KeyboardInterrupt from exception
         return modules
 
-    def _setup(self, module):
-        if not hasattr(module, "settings"):
-            logger.error(
-                "%s does not have attribute module.settings,"
-                + "could not verify needed settings!",
-                module.__module__,
-            )
-            raise TypeError(f"Please set {module.settings} attribute!")
-        logger.debug("Verifying settings for %s", module.__module__)
-        for setting, value in module.class_settings.items():
-            if value == "":
-                raise TypeError(f"Please set {module.settings}.{setting} value!")
+    # def _setup(self, module):
+    #     if not hasattr(module, "settings"):
+    #         logger.error(
+    #             "%s does not have attribute module.settings,"
+    #             + "could not verify needed settings!",
+    #             module.__module__,
+    #         )
+    #         raise TypeError(f"Please set {module.settings} attribute!")
+    #     logger.debug("Verifying settings for %s", module.__module__)
+    #     for setting, value in module.class_settings.items():
+    #         if value == "":
+    #             raise TypeError(f"Please set {module.settings}.{setting} value!")

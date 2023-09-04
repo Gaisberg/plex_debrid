@@ -9,4 +9,5 @@ repos:
     rev: 4.0.1
     hooks:
     -   id: flake8
-        args: [--max-line-length=131]
+        args: [--max-line-length=131, '--ignore=W503,E722']
+        exclude: frontend
