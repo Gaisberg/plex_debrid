@@ -16,17 +16,13 @@ class Library:
     def get_new_items(self, media_items: MediaItemContainer):
         """Update media_items attribute with items in plex library"""
         logger.info("Getting items...")
-        added_items = 0
+        added_items = []
         sections = self.class_settings["sections"].items()
         for section in sections:
             fetched_items = self._get_all_section_items(section)
-            for fetched_item in fetched_items:
-                # self._get_item_matches(fetched_item)
-                if fetched_item not in media_items:
-                    media_items.append(fetched_item)
-                    added_items += 1
-        if added_items > 0:
-            logger.info("Found %s new items", added_items)
+            added_items = added_items + media_items.extend(fetched_items)
+        if len(added_items) > 0:
+            logger.info("Found %s new items", len(added_items))
         logger.info("Done!")
 
     def update_sections(self, media_items: MediaItemContainer):
@@ -46,51 +42,44 @@ class Library:
     def match_items(self, media_items: MediaItemContainer):
         """Matches items in given mediacontainer that are not in library
         to items that are in library"""
-        logger.info("Matching items...")
+        match_time = len(media_items) * 0.033
+        logger.info("Matching items... will take around %s seconds", match_time)
+
+        # Categorize items into dictionaries for faster lookup
+        items_by_guid = {}
+        items_by_filename = {}
+        for item in media_items:
+            if item.state in [MediaItemState.LIBRARY, MediaItemState.LIBRARY_METADATA]:
+                if item.guid:
+                    items_by_guid[(item.type, item.guid)] = item
+                if item.file_name:
+                    items_by_filename[(item.type, item.file_name)] = item
+
+        movie_key = next(
+            (item.key for item in media_items if item.type == "movie" and item.guid),
+            None,
+        )
+        show_key = next(
+            (item.key for item in media_items if item.type == "show" and item.guid),
+            None,
+        )
+
         remove_these = []
         for item in media_items:
             if item.state is not MediaItemState.LIBRARY:
                 if item.type == "movie":
                     agent = "tv.plex.agents.movie"
-                    any_key = next(
-                        (
-                            item.key
-                            for item in media_items
-                            if item.type == "movie" and item.guid
-                        ),
-                        None,
-                    )
+                    any_key = movie_key
                 else:
                     agent = "tv.plex.agents.series"
-                    any_key = next(
-                        (
-                            item.key
-                            for item in media_items
-                            if item.type == "show" and item.guid
-                        ),
-                        None,
-                    )
+                    any_key = show_key
 
                 if any_key:
                     guid = self._match(any_key, item, agent)
 
-                    library_item = next(
-                        (
-                            library_item
-                            for library_item in media_items
-                            if library_item.state
-                            in [MediaItemState.LIBRARY, MediaItemState.LIBRARY_METADATA]
-                            and item.type == library_item.type
-                            and (
-                                library_item.guid is not None
-                                and library_item.guid == guid
-                                or item.file_name is not None
-                                and library_item.file_name == item.file_name
-                                and not item.key
-                            )
-                        ),
-                        None,
-                    )
+                    library_item = items_by_guid.get(
+                        (item.type, guid)
+                    ) or items_by_filename.get((item.type, item.file_name))
                     if library_item:
                         state = MediaItemState.LIBRARY
                         if library_item.guid != guid:

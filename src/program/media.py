@@ -81,7 +81,7 @@ class MediaItem:
     def set(self, key, value):
         """Set item attribute"""
         with self._lock:
-            setattr(self, key, value)
+            _set_nested_attr(self, key, value)
 
 
 class MediaItemContainer:
@@ -106,11 +106,17 @@ class MediaItemContainer:
 
     def append(self, item) -> bool:
         """Append item to container"""
-        if item not in self.items:
-            self.items.append(item)
-            self._set_updated_at()
-            return True
-        return False
+        self.items.append(item)
+        self._set_updated_at()
+
+    def extend(self, items) -> int:
+        """Extend container with items"""
+        added_items = []
+        for media_item in items:
+            if media_item not in self.items:
+                self.items.append(media_item)
+                added_items.append(media_item)
+        return added_items
 
     def _set_updated_at(self):
         self.updated_at = {
@@ -166,3 +172,21 @@ class MediaItemContainer:
     def is_empty(self):
         """Check if container is empty"""
         return len(self.items) == 0
+
+
+def _set_nested_attr(obj, key, value):
+    if "." in key:
+        parts = key.split(".", 1)
+        current_key, rest_of_keys = parts[0], parts[1]
+
+        if not hasattr(obj, current_key):
+            raise AttributeError(f"Object does not have the attribute '{current_key}'.")
+
+        current_obj = getattr(obj, current_key)
+        _set_nested_attr(current_obj, rest_of_keys, value)
+    else:
+        if isinstance(obj, dict):
+            if key in obj:
+                obj[key] = value
+        else:
+            setattr(obj, key, value)

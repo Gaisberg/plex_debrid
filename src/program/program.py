@@ -6,7 +6,7 @@ import sys
 from utils.logger import logger
 from program.media import MediaItemContainer
 from program.libraries.plex import Library as Plex
-from program.updaters.trakt import Updater as Trakt
+# from program.updaters.trakt import Updater as Trakt
 
 
 class Program:
@@ -14,7 +14,6 @@ class Program:
 
     def __init__(self):
         self.plex = Plex()
-        self.trakt = Trakt()
 
         self.media_items = MediaItemContainer()
 
@@ -33,7 +32,6 @@ class Program:
             content_service.update_items(self.media_items)
 
         self.plex.match_items(self.media_items)
-        self.trakt.update_items(self.media_items)
 
         for scraper in self.scraping_services:
             scraper.scrape(self.media_items)
@@ -54,7 +52,7 @@ class Program:
             )
             sys.modules[module_name] = module
             clsmembers = inspect.getmembers(module, inspect.isclass)
-            wanted_classes = ["Library", "Content", "Updater", "Scraper", "Debrid"]
+            wanted_classes = ["Library", "Content", "Scraper", "Debrid"]
             for name, obj in clsmembers:
                 if name in wanted_classes:
                     module = obj()

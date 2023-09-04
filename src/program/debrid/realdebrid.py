@@ -58,6 +58,7 @@ class Debrid:
                                 for file in files
                                 if files[file]["filename"].split(".")[-1]
                                 in WANTED_FORMATS
+                                and files[file]["filesize"] > 10000000
                             ),
                             None,
                         )
@@ -66,7 +67,9 @@ class Debrid:
                             part = next(part for part in stream["files"] if part)
                             file_name = stream["files"][part]["filename"]
                             media_item.set("file_name", file_name)
-                            media_item.set("streams", stream)
+                            media_item.set(
+                                "streams", stream
+                            )  # TODO: Set all streams and if its bad lets try another one
                             return True
         return False
 

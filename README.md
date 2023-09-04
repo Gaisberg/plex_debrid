@@ -9,6 +9,7 @@ TODO:
 - ~~Add overseerr support, mostly done~~; still need to mark items as available?
 - Add api endpoints, ongoing
 - Improve logging..., ongoing
+- Add frontend, ongoing
 - Check real-debrid for content at startup, we dont want duplicates!
 - Add support for shows
 - Implement uncached download in real-rebrid, dont know if we need this, lets see...

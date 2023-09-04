@@ -29,15 +29,11 @@ class Content:
             fetched_items = MediaItemContainer()
             for list_id in settings["lists"]:
                 fetched_items += self._get_items_from_list(list_id, settings["api_key"])
-            added_items = 0
-            for fetched_item in fetched_items:
-                if fetched_item not in media_items:
-                    media_items.append(fetched_item)
-                    added_items += 1
-                    logger.debug("Added '%s'", fetched_item.title)
-            if added_items > 0:
-                logger.info("Found %s new items", added_items)
-
+            added_items = media_items.extend(fetched_items)
+            if len(added_items) > 0:
+                for item in added_items:
+                    logger.debug("Added %s", item.title)
+                logger.info("Found %s new items", len(added_items))
             self.last_update = datetime.datetime.now().timestamp()
         logger.info("Done!")
 
@@ -49,6 +45,7 @@ class Content:
                 "title": fetched_item.get("title"),
                 "year": fetched_item.get("release_year"),
                 "imdb": fetched_item.get("imdb_id"),
+                "tvdb": fetched_item.get("tvdb_id"),
                 "type": fetched_item.get("mediatype"),
             }
             media_item_container.append(MediaItem(new_item, MediaItemState.CONTENT))
