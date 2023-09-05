@@ -1,4 +1,6 @@
+dill==0.3.7
+Flask==2.2.2
+PlexAPI==4.15.1
 Requests==2.31.0
-ratelimit==2.2.1
 xmltodict==0.13.0
-pre-commit
+pre-commit=3.3.3

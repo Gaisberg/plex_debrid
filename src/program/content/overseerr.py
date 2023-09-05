@@ -22,6 +22,7 @@ class Content:
         """Fetch media from overseerr and add them to media_items attribute
         if they are not already there"""
         logger.info("Getting items...")
+        self.items.load("data/overseerr_data.pkl")
         fetched_items = self._get_items_from_overseerr(1000)
         added_items = MediaItemContainer(self.items.extend(fetched_items))
         self.updater.update_items(added_items)
@@ -30,6 +31,8 @@ class Content:
             for item in added_items:
                 logger.debug("Added %s", item.title)
             logger.info("Found %s new items", len(added_items))
+        self.items.extend(added_items)
+        self.items.save("data/overseerr_data.pkl")
         logger.info("Done!")
 
     def _get_items_from_overseerr(self, amount: int):

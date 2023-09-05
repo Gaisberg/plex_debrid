@@ -3,6 +3,7 @@
 import datetime
 from enum import Enum
 import threading
+import dill
 
 
 class MediaItemState(Enum):
@@ -116,9 +117,9 @@ class MediaItemContainer:
                 return my_item
         return None
 
-    def extend(self, items) -> int:
+    def extend(self, items) -> "MediaItemContainer":
         """Extend container with items"""
-        added_items = []
+        added_items = MediaItemContainer()
         for media_item in items:
             if media_item not in self.items:
                 self.items.append(media_item)
@@ -141,13 +142,6 @@ class MediaItemContainer:
         """Count items with given state in container"""
         return len(self.get_items_with_state(state))
 
-    def change_item_state(self, item, state) -> bool:
-        """Change item state"""
-        if item in self.items:
-            item.change_state(state)
-            return True
-        return False
-
     def get_sections_needing_update(self, sections):
         """Get sections that need to be updated"""
         sections_needed = []
@@ -166,15 +160,18 @@ class MediaItemContainer:
         """Get items that need to be updated"""
         return MediaItemContainer([item for item in self.items if item.state == state])
 
-    def has_changed(self):
-        """Check if container has changed"""
-        if self.updated_at is None:
-            return False
-        return len(self.items) != self.updated_at["length"]
+    def save(self, filename):
+        """Save container to file"""
+        with open(filename, "wb") as file:
+            dill.dump(self.items, file)
 
-    def is_empty(self):
-        """Check if container is empty"""
-        return len(self.items) == 0
+    def load(self, filename):
+        """Load container from file"""
+        try:
+            with open(filename, "rb") as file:
+                self.items = dill.load(file)
+        except FileNotFoundError:
+            self.items = []
 
 
 def _set_nested_attr(obj, key, value):

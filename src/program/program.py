@@ -6,7 +6,6 @@ import sys
 from utils.logger import logger
 from program.media import MediaItemContainer
 from program.libraries.plex import Library as Plex
-# from program.updaters.trakt import Updater as Trakt
 
 
 class Program:
@@ -21,8 +20,13 @@ class Program:
         self.scraping_services = self.__import_modules("src/program/scrapers")
         self.debrid_services = self.__import_modules("src/program/debrid")
 
+        if not os.path.exists("data"):
+            os.mkdir("data")
+
     def run(self):
         """Run the program"""
+        self.media_items.load("data/media.pkl")
+
         self.plex.update_sections(self.media_items)
         self.plex.update_metadata_for_items(self.media_items)
         self.plex.get_new_items(self.media_items)
@@ -37,6 +41,8 @@ class Program:
             scraper.scrape(self.media_items)
         for debrid in self.debrid_services:
             debrid.download(self.media_items)
+
+        self.media_items.save("data/media.pkl")
 
     def __import_modules(self, folder_path: str) -> list[object]:
         file_list = [

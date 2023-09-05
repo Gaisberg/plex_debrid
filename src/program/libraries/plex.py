@@ -23,14 +23,23 @@ class Library:
     def get_new_items(self, media_items: MediaItemContainer):
         """Update media_items attribute with items in plex library"""
         logger.info("Getting items...")
-        added_items = []
+        added_items = 0
         sections = self.plex.library.sections()
-        # sections = self.class_settings["sections"].items()
         for section in sections:
             fetched_items = self._get_all_section_items(section)
-            added_items = added_items + media_items.extend(fetched_items)
-        if len(added_items) > 0:
-            logger.info("Found %s new items", len(added_items))
+            # Do this so that media items doesnt have ghost items from previous runs
+            remove_items = [
+                item
+                for item in media_items
+                if item.state == MediaItemState.LIBRARY
+                and item.type == section.type
+                and item not in fetched_items
+            ]
+            for item in remove_items:
+                media_items.remove(item)
+            added_items += len(media_items.extend(fetched_items))
+        if added_items > 0:
+            logger.info("Found %s new items", added_items)
         logger.info("Done!")
 
     def update_sections(self, media_items: MediaItemContainer):
