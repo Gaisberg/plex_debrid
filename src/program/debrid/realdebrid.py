@@ -32,7 +32,7 @@ class Debrid:
                         if file.file_name == item.file_name and file is not item
                     ):
                         request_id = self.add_magnet(item)
-                        time.sleep(0.1)
+                        time.sleep(0.3)
                         self.select_files(request_id, item)
                         added_files += 1
                         logger.debug("Downloaded item %s", item.streams["files"])

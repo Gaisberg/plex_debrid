@@ -1,8 +1,11 @@
 """Plex library module"""
+import os
+from plexapi.server import PlexServer
 from utils.logger import logger
 from utils.request import get, put
 from utils.settings import settings_manager as settings
 from program.media import MediaItem, MediaItemContainer, MediaItemState
+from program.updaters.trakt import Updater as Trakt
 
 
 class Library:
@@ -12,12 +15,17 @@ class Library:
         self.settings = "library_plex"
         self.class_settings = settings.get(self.settings)
         self.class_settings["sections"] = self._get_libraries()
+        self.plex = PlexServer(
+            self.class_settings["address"], self.class_settings["token"]
+        )
+        self.updater = Trakt()
 
     def get_new_items(self, media_items: MediaItemContainer):
         """Update media_items attribute with items in plex library"""
         logger.info("Getting items...")
         added_items = []
-        sections = self.class_settings["sections"].items()
+        sections = self.plex.library.sections()
+        # sections = self.class_settings["sections"].items()
         for section in sections:
             fetched_items = self._get_all_section_items(section)
             added_items = added_items + media_items.extend(fetched_items)
@@ -42,18 +50,13 @@ class Library:
     def match_items(self, media_items: MediaItemContainer):
         """Matches items in given mediacontainer that are not in library
         to items that are in library"""
-        match_time = len(media_items) * 0.033
-        logger.info("Matching items... will take around %s seconds", match_time)
+        logger.info("Matching items...")
 
-        # Categorize items into dictionaries for faster lookup
-        items_by_guid = {}
-        items_by_filename = {}
+        library_items = {}
         for item in media_items:
             if item.state in [MediaItemState.LIBRARY, MediaItemState.LIBRARY_METADATA]:
-                if item.guid:
-                    items_by_guid[(item.type, item.guid)] = item
                 if item.file_name:
-                    items_by_filename[(item.type, item.file_name)] = item
+                    library_items[item.file_name] = item
 
         movie_key = next(
             (item.key for item in media_items if item.type == "movie" and item.guid),
@@ -75,12 +78,9 @@ class Library:
                     any_key = show_key
 
                 if any_key:
-                    guid = self._match(any_key, item, agent)
-
-                    library_item = items_by_guid.get(
-                        (item.type, guid)
-                    ) or items_by_filename.get((item.type, item.file_name))
+                    library_item = library_items.get(item.file_name)
                     if library_item:
+                        guid = self._match(any_key, item, agent)
                         state = MediaItemState.LIBRARY
                         if library_item.guid != guid:
                             state = MediaItemState.LIBRARY_METADATA
@@ -99,36 +99,44 @@ class Library:
             media_items.remove(item)
         logger.info("Done!")
 
-    def _get_all_section_items(
-        self, section: int, request_filter=None
-    ) -> MediaItemContainer:
-        url = str(
-            self.class_settings["address"]
-            + "/library/sections/"
-            + section[0]
-            + "/all?X-Plex-Token="
-            + self.class_settings["token"]
-        )
-        if request_filter:
-            url += f"&{request_filter}"
-        response = get(url)
-        media_item_container = MediaItemContainer()
-        if response.is_ok:
-            fetched_container = response.data["MediaContainer"]
-            if "Metadata" in fetched_container:
-                for fetched_item in fetched_container["Metadata"]:
-                    state = MediaItemState.LIBRARY_METADATA
-                    if "summary" in fetched_item and len(fetched_item["summary"]) > 0:
-                        state = MediaItemState.LIBRARY
-                    if "originalTitle" in fetched_item:
-                        fetched_item["title"] = fetched_item["originalTitle"]
-                    file_name = next(
-                        part for part in fetched_item["Media"][0]["Part"] if part
-                    )
-                    file_name = file_name["file"].split("\\")[-1]
-                    fetched_item["file_name"] = file_name
-                    media_item_container.append(MediaItem(fetched_item, state))
-        return media_item_container
+    def _get_all_section_items(self, section: int) -> MediaItemContainer:
+        items = MediaItemContainer()
+        for item in section.all():
+            new_item = {
+                "guid": item.guid,
+                "key": item.key,
+                "title": item.title,
+                "file_name": next(os.path.basename(file) for file in item.locations),
+                "type": item.type,
+                "imdb": next(
+                    (
+                        guid.id.split("://")[-1]
+                        for guid in item.guids
+                        if "imdb" in guid.id
+                    ),
+                    None,
+                ),
+            }
+            if new_item["type"] == "movie":
+                new_item["tmdb"] = next(
+                    (
+                        guid.id.split("://")[-1]
+                        for guid in item.guids
+                        if "tmdb" in guid.id
+                    ),
+                    None,
+                )
+            else:
+                new_item["tvdb"] = next(
+                    (
+                        guid.id.split("://")[-1]
+                        for guid in item.guids
+                        if "tvdb" in guid.id
+                    ),
+                    None,
+                )
+            items.append(MediaItem(new_item, MediaItemState.LIBRARY))
+        return items
 
     def _get_libraries(self):
         """Wrapper for plex api get libraries method"""

@@ -1,9 +1,10 @@
-"""Requests wrapper"""
 import json
-from types import SimpleNamespace
-import requests
 import xmltodict
-from utils.logger import logger
+import requests
+from types import SimpleNamespace
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class ResponseObject:
@@ -18,49 +19,60 @@ class ResponseObject:
         """Handle different types of responses"""
         if not self.is_ok:
             logger.warning("Error: %s %s", response.status_code, response.content)
-        data = {}
+
         if len(response.content) > 0:
-            if "text/xml" in response.headers.get("Content-Type"):
-                data = xmltodict.parse(response.content)
-            elif "application/json" in response.headers.get("Content-Type"):
-                data = json.loads(response.content)
+            content_type = response.headers.get("Content-Type")
+            if "text/xml" in content_type:
+                return xmltodict.parse(response.content)
+            elif "application/json" in content_type:
+                return json.loads(response.content)
             else:
-                data = response.content
-        return data
+                return response.content
+        return {}
 
 
-def get(url: str, timeout=10, additional_headers=None) -> ResponseObject:
-    """Requests get wrapper"""
+def _handle_request_exception() -> SimpleNamespace:
+    """Handle exceptions during requests and return a namespace object."""
+    logger.error("Request failed", exc_info=True)
+    return SimpleNamespace(ok=False, data={}, content={}, status_code=500)
+
+
+def _make_request(
+    method: str, url: str, data: dict = None, timeout=10, additional_headers=None
+) -> ResponseObject:
     session = requests.Session()
     headers = {"Content-Type": "application/json", "Accept": "application/json"}
     if additional_headers:
         headers.update(additional_headers)
+
     try:
-        response = session.get(url, headers=headers, timeout=timeout)
-    except:
-        response = SimpleNamespace(**{"ok": False, "data": None, "content": None})
+        response = session.request(
+            method, url, headers=headers, data=data, timeout=timeout
+        )
+    except requests.RequestException:
+        response = _handle_request_exception()
+
     return ResponseObject(response)
 
 
-def post(url, data: dict, timeout=10, additional_headers=None) -> ResponseObject:
+def get(url: str, timeout=10, additional_headers=None) -> ResponseObject:
+    """Requests get wrapper"""
+    return _make_request(
+        "GET", url, timeout=timeout, additional_headers=additional_headers
+    )
+
+
+def post(url: str, data: dict, timeout=10, additional_headers=None) -> ResponseObject:
     """Requests post wrapper"""
-    session = requests.Session()
-    try:
-        response = session.post(
-            url, headers=additional_headers, data=data, timeout=timeout
-        )
-    except:
-        response = SimpleNamespace(**{"ok": False, "data": None, "content": None})
-    return ResponseObject(response)
+    return _make_request(
+        "POST", url, data=data, timeout=timeout, additional_headers=additional_headers
+    )
 
 
-def put(url, data: dict = None, timeout=10, additional_headers=None) -> ResponseObject:
+def put(
+    url: str, data: dict = None, timeout=10, additional_headers=None
+) -> ResponseObject:
     """Requests put wrapper"""
-    session = requests.Session()
-    try:
-        response = session.put(
-            url, data=data, headers=additional_headers, timeout=timeout
-        )
-    except:
-        response = SimpleNamespace(**{"ok": False, "data": None, "content": None})
-    return ResponseObject(response)
+    return _make_request(
+        "PUT", url, data=data, timeout=timeout, additional_headers=additional_headers
+    )

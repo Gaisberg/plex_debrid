@@ -46,18 +46,14 @@ class MediaItem:
     def __eq__(self, other):
         with self._lock:
             return (
-                any(
+                self.file_name is not None
+                and self.file_name == other.file_name
+                or any(
                     key in other.ids.keys()
                     and self.ids[key] is not None
                     and self.ids[key] == other.ids[key]
                     for key in self.ids.keys()
                 )
-                or self.guid is not None
-                and self.guid == other.get("guid")
-                or self.title is not None
-                and self.title == other.get("title")
-                and self.year is not None
-                and self.year == other.get("year")
             )
 
     def __iter__(self):
@@ -104,10 +100,21 @@ class MediaItemContainer:
                 self._set_updated_at()
         return self
 
+    def __len__(self):
+        """Get length of container"""
+        return len(self.items)
+
     def append(self, item) -> bool:
         """Append item to container"""
         self.items.append(item)
         self._set_updated_at()
+
+    def get(self, item) -> MediaItem:
+        """Get item matching given item from container"""
+        for my_item in self.items:
+            if my_item == item:
+                return my_item
+        return None
 
     def extend(self, items) -> int:
         """Extend container with items"""
@@ -158,10 +165,6 @@ class MediaItemContainer:
     def get_items_with_state(self, state):
         """Get items that need to be updated"""
         return MediaItemContainer([item for item in self.items if item.state == state])
-
-    def __len__(self):
-        """Get length of container"""
-        return len(self.items)
 
     def has_changed(self):
         """Check if container has changed"""
