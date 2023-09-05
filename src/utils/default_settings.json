@@ -1,0 +1,29 @@
+{
+    "version": "0.1.0",
+    "debug": true,
+    "service_mode": false,
+    "log": true,
+    "menu_on_startup": true,
+    "library_plex": {
+        "user": "",
+        "token" : "",
+        "address": ""
+    },
+    "content_mdblist": {
+        "lists": [
+            ""
+        ],
+        "api_key" : "",
+        "update_interval": 80
+    },
+    "content_overseerr": {
+        "url" : "",
+        "api_key" : ""
+    },
+    "scraper_torrentio" : {
+        "filter" : "480p,scr,cam"
+    },
+    "debrid_realdebrid" : {
+        "api_key" : ""
+    }
+}
