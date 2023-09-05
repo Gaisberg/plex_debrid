@@ -1,9 +1,13 @@
-import Dashboard from './components/Dashboard';
+// App.tsx
+import { BrowserRouter } from 'react-router-dom';
+import Routing from './routes/Routing';
 import './App.css';
 
 function App() {
   return (
-    Dashboard()
+    <BrowserRouter>
+      <Routing />
+    </BrowserRouter>
   );
 }
 
