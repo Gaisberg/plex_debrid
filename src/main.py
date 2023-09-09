@@ -9,11 +9,13 @@ from program.program import Program
 from utils.thread import ThreadRunner
 from utils.ui_helpers import CustomJSONEncoder
 from controllers.controller import ProgramController
+from flask_cors import CORS
 
 sys.path.append(os.getcwd())
 
 if __name__ == "__main__":
     app = Flask(__name__)
+    CORS(app)
     program = Program()
     app.register_blueprint(ProgramController(program))
     app.json_encoder = CustomJSONEncoder
