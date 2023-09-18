@@ -37,10 +37,12 @@ function MediaPage() {
     "ERROR",
     "UNKNOWN",
     "LIBRARY",
-    "LIBRARY_METADATA",
+    "LIBRARY_ONGOING",
     "CONTENT",
     "SCRAPED",
-    "DOWNLOADING"
+    "PARTIALLY_SCRAPED",
+    "DOWNLOADING",
+    "PARTIALLY_DOWNLOADING"
   ];
 
   return (

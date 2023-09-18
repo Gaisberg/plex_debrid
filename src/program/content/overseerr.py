@@ -2,7 +2,7 @@
 from utils.settings import settings_manager
 from utils.logger import logger
 from utils.request import get
-from program.media import MediaItem, MediaItemContainer, MediaItemState
+from program.media import MediaItemContainer
 from program.updaters.trakt import Updater as Trakt
 
 
@@ -12,68 +12,62 @@ class Content:
     def __init__(
         self,
     ):
-        self.settings = "content_overseerr"
-        self.class_settings = settings_manager.get(self.settings)
-        self.mdb_api_key = settings_manager.get("content_mdblist")["api_key"]
+        self.settings = settings_manager.get("content_overseerr")
         self.updater = Trakt()
-        self.items = MediaItemContainer()
+        self.not_found_ids = []
 
     def update_items(self, media_items: MediaItemContainer):
         """Fetch media from overseerr and add them to media_items attribute
         if they are not already there"""
         logger.info("Getting items...")
-        self.items.load("data/overseerr_data.pkl")
-        fetched_items = self._get_items_from_overseerr(1000)
-        added_items = MediaItemContainer(self.items.extend(fetched_items))
-        self.updater.update_items(added_items)
-        added_items = media_items.extend(added_items)
-        if len(added_items) > 0:
-            for item in added_items:
-                logger.debug("Added %s", item.title)
-            logger.info("Found %s new items", len(added_items))
-        self.items.extend(added_items)
-        self.items.save("data/overseerr_data.pkl")
+        items = self._get_items_from_overseerr(1000)
+        container = self.updater.create_items(items)
+        media_items.extend(container)
         logger.info("Done!")
 
     def _get_items_from_overseerr(self, amount: int):
         """Fetch media from overseerr"""
-        response = get_requests(
-            self.class_settings["url"], self.class_settings["api_key"], amount
+
+        response = get(
+            self.settings.get("url") + f"/api/v1/request?take={amount}",
+            additional_headers={"X-Api-Key": self.settings.get("api_key")},
         )
-        fetched_items = MediaItemContainer()
-        for fetched_item in response["results"]:
-            if fetched_item["type"] == "tv":
-                fetched_item["type"] = "show"
-            fetched_item["imdb"] = fetched_item["media"]["imdbId"]
-            fetched_item["tmdb"] = fetched_item["media"]["tmdbId"]
-            fetched_item["tvdb"] = fetched_item["media"]["tvdbId"]
-            new_item = MediaItem(fetched_item, MediaItemState.CONTENT)
-            fetched_items.append(new_item)
-        return fetched_items
+        ids = []
+        if response.is_ok:
+            for item in response.data.results:
+                if not item.media.imdbId:
+                    imdb_id = self.get_imdb_id(item.media)
+                    if imdb_id:
+                        ids.append(imdb_id)
+                else:
+                    ids.append(item.media.imdbId)
 
+        return ids
 
-# API METHODS
-def get_requests(overseerr_url: str, api_key: str, amount: int) -> dict:
-    """Wrapper for overseerr api method get_requests"""
-    response = get(
-        overseerr_url + f"/api/v1/request?take={amount}",
-        additional_headers={"X-Api-Key": api_key},
-    )
-    return response.data
+    def get_imdb_id(self, overseerr_item):
+        """Get imdbId for item from overseerr"""
+        if overseerr_item.mediaType == "show":
+            external_id = overseerr_item.tvdbId
+            overseerr_item.mediaType = "tv"
+            id_extension = "tvdb-"
+        else:
+            external_id = overseerr_item.tmdbId
+            id_extension = "tmdb-"
 
-
-def get_movie_details(overseerr_url: str, api_key: str, movie_id: str) -> dict:
-    """Wrapper for overseerr api method get_movie_details"""
-    response = get(
-        overseerr_url + f"/api/v1/movie/{movie_id}",
-        additional_headers={"X-Api-Key": api_key},
-    )
-    return response.data
-
-
-def get_tv_details(overseerr_url: str, api_key: str, tv_id: str) -> dict:
-    """Wrapper for overseerr api method get_tv_details"""
-    response = get(
-        overseerr_url + f"/api/v1/tv/{tv_id}", additional_headers={"X-Api-Key": api_key}
-    )
-    return response.data
+        if f"{id_extension}{external_id}" in self.not_found_ids:
+            return None
+        response = get(
+            self.settings.get("url")
+            + f"/api/v1/{overseerr_item.mediaType}/{external_id}?language=en",
+            additional_headers={"X-Api-Key": self.settings.get("api_key")},
+        )
+        if response.is_ok:
+            imdb_id = response.data.externalIds.imdbId
+            if imdb_id:
+                return imdb_id
+            self.not_found_ids.append(f"{id_extension}{external_id}")
+        title = getattr(response.data, "title", None) or getattr(
+            response.data, "originalName", None
+        )
+        logger.debug("Could not get imdbId for %s", title)
+        return None

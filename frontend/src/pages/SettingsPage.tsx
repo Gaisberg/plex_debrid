@@ -1,5 +1,9 @@
 const SettingsPage: React.FC = () => {
-    return <div>Your Settings Content Here</div>;
+    return (
+    <div>
+
+    </div>
+    );
   };
 
   export default SettingsPage;

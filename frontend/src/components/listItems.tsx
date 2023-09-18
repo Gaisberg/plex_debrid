@@ -7,9 +7,16 @@ import ListSubheader from '@mui/material/ListSubheader';
 import TerminalIcon from '@mui/icons-material/Terminal';
 import SettingsIcon from '@mui/icons-material/Settings';
 import TheatersIcon from '@mui/icons-material/Theaters';
+import HomeIcon from '@mui/icons-material/Home';
 
 export const mainListItems = (
   <React.Fragment>
+    <ListItemButton component={RouterLink} to="/">
+      <ListItemIcon>
+        <HomeIcon />
+      </ListItemIcon>
+      <ListItemText primary="Home" />
+    </ListItemButton>
     <ListItemButton component={RouterLink} to="/console">
       <ListItemIcon>
         <TerminalIcon />
