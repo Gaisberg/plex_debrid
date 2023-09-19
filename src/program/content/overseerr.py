@@ -22,7 +22,9 @@ class Content:
         logger.info("Getting items...")
         items = self._get_items_from_overseerr(1000)
         container = self.updater.create_items(items)
-        media_items.extend(container)
+        added_items = media_items.extend(container)
+        if len(added_items) > 0:
+            logger.info("Added %s items", len(added_items))
         logger.info("Done!")
 
     def _get_items_from_overseerr(self, amount: int):

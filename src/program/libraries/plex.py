@@ -1,5 +1,6 @@
 """Plex library module"""
 import os
+import copy
 from plexapi.server import PlexServer
 from requests.exceptions import ReadTimeout
 from utils.logger import logger
@@ -12,7 +13,6 @@ from program.media import (
     Season,
     Show,
 )
-import copy
 
 
 class Library:
@@ -29,9 +29,11 @@ class Library:
         logger.info("Getting items...")
         added_items = 0
         items = MediaItemContainer()
-        all_items = self.plex.library.all()
-        for item in all_items:
-            items += self._create_item(item)
+        sections = self.plex.library.sections()
+        for section in sections:
+            if not section.refreshing:
+                for item in section.all():
+                    items += self._create_item(item)
         media_items.extend(self.match_items(items, media_items))
         added_items += len(media_items.extend(items))
         if added_items > 0:
@@ -182,6 +184,7 @@ class Library:
             item.set("locations", library_item.locations)
         item.set("guid", library_item.guid)
         item.set("key", library_item.key)
+        item.set("art_url", library_item.art_url)
 
     def _fix_match(self, library_item, item):
         """Internal method to use in match_items method.
@@ -227,6 +230,7 @@ def _map_item_from_data(item, item_type):
         locations = getattr(item, "locations", [])
         season_number = getattr(item, "seasonNumber", None)
         episode_number = getattr(item, "episodeNumber", None)
+        art_url = getattr(item, "artUrl", None)
     except ReadTimeout:
         return None
     imdb_id = None
@@ -247,6 +251,7 @@ def _map_item_from_data(item, item_type):
         "genres": genres,
         "guid": guid,
         "key": key,
+        "art_url": art_url,
     }
     match item_type:
         case "movie":

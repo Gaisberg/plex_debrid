@@ -34,10 +34,10 @@ function MediaPage() {
 
   const groupByState = (items : any) => {
     return items.reduce((acc: any, item : any) => {
-      if (!acc[item.state]) {
-        acc[item.state] = [];
+      if (!acc[item.current_state]) {
+        acc[item.current_state] = [];
       }
-      acc[item.state].push(item);
+      acc[item.current_state].push(item);
       return acc;
     }, {});
   };

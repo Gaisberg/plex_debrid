@@ -44,6 +44,7 @@ class MediaItem:
         # Plex related
         self.key = item.get("key", None)
         self.guid = item.get("guid", None)
+        self.art_url = item.get("art_url", None)
 
     def is_cached(self):
         if self.streams:

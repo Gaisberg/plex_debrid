@@ -1,6 +1,6 @@
 """ Program controller """
+from copy import copy
 from flask import Blueprint, request
-
 from program.media import MediaItemState
 from utils.settings import settings_manager
 
@@ -34,6 +34,10 @@ class ProgramController(Blueprint):
             ]
         else:
             items = self.program.media_items.items
+
+        new_items = copy(items)
+        for item in new_items:
+            item.set("current_state", item.state.name)
         return items
 
     def get_states(self):

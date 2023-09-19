@@ -3,7 +3,7 @@ import { Card, CardContent, CardActions, Button, Typography, Collapse } from '@m
 import { MediaItemCardProps } from '../types/Types';
 import styles from './MediaItems.module.css';
 
-function MediItemsCard({ title, items }: MediaItemCardProps) {
+function MediaItemsCard({ title, items }: MediaItemCardProps) {
   const [open, setOpen] = useState(false);
 
   return (
@@ -34,4 +34,4 @@ function MediItemsCard({ title, items }: MediaItemCardProps) {
 );
 }
 
-export default MediItemsCard;
+export default MediaItemsCard;
