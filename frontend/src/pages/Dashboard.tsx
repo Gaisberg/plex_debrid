@@ -46,22 +46,14 @@ const AppBar = styled(MuiAppBar, {
     easing: theme.transitions.easing.sharp,
     duration: theme.transitions.duration.leavingScreen,
   }),
-  width: 'calc(100% - 20px)',
   borderRadius: '10px',
-  marginTop: '10px',
-  marginRight: '10px',
-  marginLeft: '10px'
+  position: 'relative'
 }));
 
 const Drawer = styled(MuiDrawer, { shouldForwardProp: (prop) => prop !== 'open' })(
   ({ theme, open }) => ({
     '& .MuiDrawer-paper': {
-      position: 'fixed',
-      height: 'auto', // 100vh is viewport height, 64px is AppBar's height
-      top: '95px', // Push it down by AppBar's height
-      bottom: '0',
-      marginLeft: '13px',
-      marginBottom: "13px",
+      position: 'relative',
       whiteSpace: '',
       borderRadius: '10px',
       width: drawerWidth,
@@ -138,26 +130,7 @@ const Dashboard: React.FC<DashboardProps> = ( {PageComponent}) =>{
 
   return (
     <ThemeProvider theme={theme}>
-      <Box sx={{ display: 'flex' }}>
-        <CssBaseline />
-        <AppBar open={open} sx= {{height: '64px'}}>
-          <Toolbar>
-            <Typography
-              marginLeft="50px"
-              component="h1"
-              variant="h6"
-              color="inherit"
-              noWrap
-              sx={{ flexGrow: 1 }}
-            >
-              Plex Debrid
-            </Typography>
-            <ThemeToggleButton toggleTheme={toggleTheme} />
-          </Toolbar>
-        </AppBar>
-        <Box
-          component="main"
-          position='fixed'
+      <Box component="main"
           sx={{
             backgroundColor: (theme) =>
               theme.palette.mode === 'light'
@@ -167,26 +140,51 @@ const Dashboard: React.FC<DashboardProps> = ( {PageComponent}) =>{
             height: '100vh',
             width: '100%',
             overflow: 'auto',
-            marginTop: "64px",
-            marginLeft: "50px",
-          }}
-        >
-          <Drawer variant="permanent" open={open}>
-            <List component="nav">
-              <MenuToggleButton
-                  open={open} setOpen={setOpen}
-                />
-                <Divider />
-                {mainListItems}
-            </List>
-          </Drawer>
-          <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }} >
-            <Paper elevation={3} sx={{ p: 2 }}>
-              <PageComponent />
-            </Paper>
-            <Copyright sx={{ pt: 4 }} />
-          </Container>
+            alignItems: 'center',
+            pt: ".5%",
+            pl: '1%',
+            pr: '1%',
+            pb: '.5%',
+          }}>
+        <CssBaseline />
+        <Box component="header" width = "100%" height = '64px'>
+            <AppBar open={open}>
+              <Toolbar>
+                <Typography
+                  component="h1"
+                  variant="h6"
+                  color="inherit"
+                  noWrap
+                  sx={{ flexGrow: 1 }}
+                >
+                  Plex Debrid
+                </Typography>
+                <ThemeToggleButton toggleTheme={toggleTheme} />
+              </Toolbar>
+            </AppBar>
         </Box>
+        <Box sx={{ display: 'flex', width: '100%', pt: '1%', height: '100%'}}>
+          <Box component="nav" width={drawerWidth}>
+            <Drawer variant="permanent" open={open}>
+              <List component="nav">
+                <MenuToggleButton
+                    open={open} setOpen={setOpen}
+                  />
+                  <Divider />
+                  {mainListItems}
+              </List>
+            </Drawer>
+          </Box>
+          <Box width='95%'>
+            <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }} >
+              <Paper elevation={3} sx={{ p: 2 }}>
+                <PageComponent />
+              </Paper>
+              <Copyright sx={{ pt: 4 }} />
+            </Container>
+          </Box>
+        </Box>
+
       </Box>
     </ThemeProvider>
   );

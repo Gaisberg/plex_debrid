@@ -16,12 +16,21 @@ function MediaPage() {
 
   useEffect(() => {
     fetch('http://localhost:8080/items')
-      .then(response => response.json())
+      .then(response => {
+        if (!response.ok) {
+          throw new Error('Error:' + response.status);
+        }
+        return response.json();
+      })
       .then(data => {
         setItems(data);
         setGroupedItems(groupByState(data));
+      })
+      .catch(error => {
+        console.error("There was an error fetching the data:", error);
+        // You can also set some state here if you want to show an error message to the user.
       });
-  }, []);
+}, []);
 
   const groupByState = (items : any) => {
     return items.reduce((acc: any, item : any) => {
