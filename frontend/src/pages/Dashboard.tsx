@@ -118,14 +118,14 @@ const Dashboard: React.FC<DashboardProps> = ( {PageComponent}) =>{
 
   const [open, setOpen] = React.useState(true);
 
-  const [theme, setTheme] = React.useState(lightTheme);
+  const savedTheme = localStorage.getItem('theme');
+  const defaultTheme = savedTheme === 'dark' ? darkTheme : lightTheme;
+  const [theme, setTheme] = React.useState(defaultTheme);
 
   const toggleTheme = () => {
-      if (theme === lightTheme) {
-          setTheme(darkTheme);
-      } else {
-          setTheme(lightTheme);
-      }
+      let newTheme = theme === lightTheme ? darkTheme : lightTheme;
+      setTheme(newTheme);
+      localStorage.setItem('theme', newTheme === lightTheme ? 'light' : 'dark');
   };
 
   return (
@@ -184,7 +184,6 @@ const Dashboard: React.FC<DashboardProps> = ( {PageComponent}) =>{
             </Container>
           </Box>
         </Box>
-
       </Box>
     </ThemeProvider>
   );
