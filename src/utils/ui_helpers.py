@@ -1,7 +1,7 @@
 """Ui helpers"""
 from types import SimpleNamespace
 from flask.json import JSONEncoder
-from program.media import MediaItem, MediaItemState
+from core.media import MediaItem, MediaItemState
 
 
 class CustomJSONEncoder(JSONEncoder):

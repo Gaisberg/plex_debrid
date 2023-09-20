@@ -1,7 +1,7 @@
 """ Program controller """
 from copy import copy
 from flask import Blueprint, request
-from program.media import MediaItemState
+from core.media import MediaItemState
 from utils.settings import settings_manager
 
 
@@ -12,7 +12,7 @@ class ProgramController(Blueprint):
         super().__init__("program", __name__)
         self.program = program
         self.register_blueprint(self.PlexController(self.program.plex))
-        self.register_blueprint(self.ContentController(self.program.content_services))
+        # self.register_blueprint(self.ContentController(self.program.content_services))
         # self.register_blueprint(self.ScrapingController(self.program.scraping_instances))
         # self.register_blueprint(self.DebridController(self.program.debrid_instances))
         self.add_url_rule("/items", methods=["GET"], view_func=self.get_items)
@@ -55,12 +55,12 @@ class ProgramController(Blueprint):
             super().__init__("library", __name__)
             self.plex = plex
 
-    class ContentController(Blueprint):
-        """Content controller blueprint"""
+    # class ContentController(Blueprint):
+    #     """Content controller blueprint"""
 
-        def __init__(self, instances: list):
-            super().__init__("content", __name__)
-            self.instances = instances
+    #     def __init__(self, instances: list):
+    #         super().__init__("content", __name__)
+    #         self.instances = instances
 
     class SettingsController(Blueprint):
         """Settings controller blueprint"""

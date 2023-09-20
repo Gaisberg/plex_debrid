@@ -5,7 +5,7 @@ from plexapi.server import PlexServer
 from requests.exceptions import ReadTimeout
 from utils.logger import logger
 from utils.settings import settings_manager as settings
-from program.media import (
+from core.media import (
     Episode,
     MediaItemContainer,
     MediaItemState,
@@ -19,9 +19,9 @@ class Library:
     """Plex library class"""
 
     def __init__(self):
-        self.class_settings = settings.get("library_plex")
+        plex_settings = settings.get("plex")
         self.plex = PlexServer(
-            self.class_settings["address"], self.class_settings["token"], timeout=5
+            plex_settings["address"], plex_settings["token"], timeout=5
         )
 
     def update_items(self, media_items: MediaItemContainer):

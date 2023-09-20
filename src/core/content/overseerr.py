@@ -2,30 +2,20 @@
 from utils.settings import settings_manager
 from utils.logger import logger
 from utils.request import get
-from program.media import MediaItemContainer
-from program.updaters.trakt import Updater as Trakt
 
 
-class Content:
+class Overseerr:
     """Content class for mdblist"""
 
     def __init__(
         self,
     ):
-        self.settings = settings_manager.get("content_overseerr")
-        self.updater = Trakt()
+        self.settings = settings_manager.get("overseerr")
         self.not_found_ids = []
 
-    def update_items(self, media_items: MediaItemContainer):
-        """Fetch media from overseerr and add them to media_items attribute
-        if they are not already there"""
-        logger.info("Getting items...")
-        items = self._get_items_from_overseerr(1000)
-        container = self.updater.create_items(items)
-        added_items = media_items.extend(container)
-        if len(added_items) > 0:
-            logger.info("Added %s items", len(added_items))
-        logger.info("Done!")
+    def get_items(self):
+        """Fetch imdb_ids for all requests from overseerr"""
+        return self._get_items_from_overseerr(1000)
 
     def _get_items_from_overseerr(self, amount: int):
         """Fetch media from overseerr"""
@@ -34,15 +24,15 @@ class Content:
             self.settings.get("url") + f"/api/v1/request?take={amount}",
             additional_headers={"X-Api-Key": self.settings.get("api_key")},
         )
-        ids = []
+        ids = set()
         if response.is_ok:
             for item in response.data.results:
                 if not item.media.imdbId:
                     imdb_id = self.get_imdb_id(item.media)
                     if imdb_id:
-                        ids.append(imdb_id)
+                        ids.add(imdb_id)
                 else:
-                    ids.append(item.media.imdbId)
+                    ids.add(item.media.imdbId)
 
         return ids
 

@@ -2,45 +2,36 @@
 from utils.settings import settings_manager
 from utils.logger import logger
 from utils.request import RateLimitExceeded, RateLimiter, get
-from program.media import MediaItemContainer
-from program.updaters.trakt import Updater as Trakt
+from core.media import MediaItemContainer
 
 
-class Content:
+class Mdblist:
     """Content class for mdblist"""
 
     def __init__(
         self,
     ):
-        self.settings = settings_manager.get("content_mdblist")
-        self.updater = Trakt()
+        self.settings = settings_manager.get("mdblist")
         self.requests_per_2_minutes = self._calculate_request_time()
         self.rate_limiter = RateLimiter(self.requests_per_2_minutes, 120, True)
 
-    def update_items(self, media_items: MediaItemContainer):
-        """Fetch media from mdblist and add them to media_items attribute
-        if they are not already there"""
+    def get_items(self):
+        """Fetch imdb_ids of all items from mdblist lists"""
+        items = set()
         try:
             with self.rate_limiter:
                 logger.info("Getting items...")
-
-                items = []
                 for list_id in self.settings["lists"]:
                     if list_id:
-                        items += self._get_items_from_list(
+                        items.update(self._get_items_from_list(
                             list_id, self.settings["api_key"]
-                        )
-
-                container = self.updater.create_items(items)
-                added_items = media_items.extend(container)
-                if len(added_items) > 0:
-                    logger.info("Added %s items", len(added_items))
-                logger.info("Done!")
+                        ))
         except RateLimitExceeded:
             pass
+        return items
 
     def _get_items_from_list(self, list_id: str, api_key: str) -> MediaItemContainer:
-        return [item.imdb_id for item in list_items(list_id, api_key)]
+        return {item.imdb_id for item in list_items(list_id, api_key)}
 
     def _calculate_request_time(self):
         limits = my_limits(self.settings["api_key"]).limits

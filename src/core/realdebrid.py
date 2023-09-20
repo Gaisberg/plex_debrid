@@ -5,17 +5,19 @@ import time
 from utils.logger import logger
 from utils.request import get, post
 from utils.settings import settings_manager
-from program.media import MediaItem, MediaItemContainer, MediaItemState
+from core.media import MediaItem, MediaItemContainer, MediaItemState
 
 
 WANTED_FORMATS = [".mkv", ".mp4", ".avi"]
 
 
-class Debrid:  # TODO CHECK TORRENTS LIST BEFORE DOWNLOAD, IF DOWNLOADED AND NOT IN LIBRARY CHOOSE ANOTHER TORRENT
+class Debrid:
+    # TODO CHECK TORRENTS LIST BEFORE DOWNLOAD,
+    # IF DOWNLOADED AND NOT IN LIBRARY CHOOSE ANOTHER TORRENT
     """Real-debrid.com debrider"""
 
     def __init__(self):
-        self.settings = settings_manager.get("debrid_realdebrid")
+        self.settings = settings_manager.get("realdebrid")
         self.auth_headers = {"Authorization": f'Bearer {self.settings["api_key"]}'}
         self._torrents = {}
 
@@ -67,7 +69,10 @@ class Debrid:  # TODO CHECK TORRENTS LIST BEFORE DOWNLOAD, IF DOWNLOADED AND NOT
             log_string = f"{item.parent.title} season {item.number}"
             # item.parent.change_state(MediaItemState.PARTIALLY_DOWNLOADING)
         if item.type == "episode":
-            log_string = f"{item.parent.parent.title} season {item.parent.number} episode {item.number}"
+            log_string = (
+                f"{item.parent.parent.title} season "
+                + f"{item.parent.number} episode {item.number}"
+            )
             if folder_name:
                 item.parent.parent.locations.append(folder_name)
             item.set("file_name", item.active_stream.get("file_name"))
@@ -78,7 +83,7 @@ class Debrid:  # TODO CHECK TORRENTS LIST BEFORE DOWNLOAD, IF DOWNLOADED AND NOT
 
     def _get_torrent_info(self, request_id):
         data = self.get_torrent_info(request_id)
-        if not data["id"] in self._torrents.keys():
+        if not data["id"] in self._torrents:
             self._torrents[data["id"]] = data
 
     def _download_show(self, item):
@@ -131,7 +136,10 @@ class Debrid:  # TODO CHECK TORRENTS LIST BEFORE DOWNLOAD, IF DOWNLOADED AND NOT
             case "season":
                 log_string = f"{item.parent.title} season {item.number}"
             case "episode":
-                log_string = f"{item.parent.parent.title} season {item.parent.number} episode {item.number}"
+                log_string = (
+                    f"{item.parent.parent.title} season "
+                    + f"{item.parent.number} episode {item.number}"
+                )
             case _:
                 log_string = ""
 

@@ -68,8 +68,6 @@ class Logger(logging.Logger):
             os.path.join("logs", file_name), encoding="utf-8"
         )
         file_handler.setLevel(logging.DEBUG)
-        # if settings_manager.get("debug"):
-        #     file_handler.setLevel(logging.DEBUG)
         file_handler.setFormatter(formatter)
 
         console_handler = logging.StreamHandler()

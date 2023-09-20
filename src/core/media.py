@@ -28,7 +28,6 @@ class MediaItem:
 
     def __init__(self, item):
         self._lock = threading.Lock()
-        # self._state = item.get("state", MediaItemState.UNKNOWN)
         self.scraped_at = 0
         self.active_stream = item.get("active_stream", None)
         self.streams = {}

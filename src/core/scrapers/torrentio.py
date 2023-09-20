@@ -5,7 +5,7 @@ from requests.exceptions import RequestException
 from utils.logger import logger
 from utils.request import RateLimitExceeded, get, RateLimiter
 from utils.settings import settings_manager
-from program.media import (
+from core.media import (
     MediaItem,
     MediaItemContainer,
     MediaItemState,
@@ -16,8 +16,7 @@ class Scraper:
     """Scraper for torrentio"""
 
     def __init__(self):
-        self.settings = "scraper_torrentio"
-        self.class_settings = settings_manager.get(self.settings)
+        self.class_settings = settings_manager.get("torrentio")
         self.last_scrape = 0
         self.filters = (
             f'sort=qualitysize%7Cqualityfilter={self.class_settings["filter"]}'
@@ -72,10 +71,12 @@ class Scraper:
             if item.type == "season":
                 log_string = f"{item.parent.title} season {item.number}"
             if item.type == "episode":
-                log_string = f"{item.parent.parent.title} season {item.parent.number} episode {item.number}"
+                log_string = (
+                    f"{item.parent.parent.title} season "
+                    + f"{item.parent.number} episode {item.number}"
+                )
             if len(data) > 0:
                 item.set("streams", data)
-                # item.change_state(MediaItemState.SCRAPED)
                 logger.debug("Found %s streams for %s", len(data), log_string)
                 amount_scraped += 1
                 continue
@@ -163,9 +164,6 @@ class Scraper:
 
                 if len(data) > 0:
                     return data
-            else:
-                # item.change_state(MediaItemState.ERROR)
-                pass
             return {}
 
 

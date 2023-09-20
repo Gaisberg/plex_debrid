@@ -2,7 +2,7 @@
 from datetime import datetime
 from utils.logger import logger
 from utils.request import get
-from program.media import (
+from core.media import (
     Episode,
     MediaItemContainer,
     MediaItemState,
@@ -15,15 +15,22 @@ from program.media import (
 CLIENT_ID = "0183a05ad97098d87287fe46da4ae286f434f32e8e951caad4cc147c947d79a3"
 
 
-class Updater:
-    """Trakt updater class"""
+class Trakt:
+    """
+    This class is responsible for getting mediaitem attributes from trakt.tv,
+    basic idea is that for each new imdb_id we give the class it fetches trakt objects
+    and creates media items from them.
+
+    We store trakt data for each imdb_id in order to speed up the process
+    """
 
     def __init__(self):
         self.trakt_data = MediaItemContainer()
-        self.ids = []
 
-    def create_items(self, imdb_ids):
-        """Update media items to state where they can start downloading"""
+    def create_items(self, imdb_ids: set):
+        """
+        Creates MediaItems from given imdb_ids
+        """
         self.trakt_data.load("data/trakt_data.pkl")
         new_items = MediaItemContainer()
         get_items = MediaItemContainer()
@@ -93,9 +100,6 @@ def _map_item_from_data(data, item_type):
         case _:
             return_item = None
     return return_item
-
-
-# API METHODS
 
 
 def get_show(imdb_id: str):
