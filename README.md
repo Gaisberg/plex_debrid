@@ -1,3 +1,5 @@
+# DISCONTINUED
+
 The idea behind this was to make a simple and functional rewrite of plex debrid that seemed to get a bit clustered.
 
 Rewrite of plex_debrid project, limited functionality:
