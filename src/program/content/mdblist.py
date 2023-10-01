@@ -1,9 +1,9 @@
 """Mdblist content module"""
-import datetime
-from utils.settings import settings_manager as s
+from utils.settings import settings_manager
 from utils.logger import logger
-from utils.request import get
-from program.media import MediaItem, MediaItemContainer, MediaItemState
+from utils.request import RateLimitExceeded, RateLimiter, get
+from program.media import MediaItemContainer
+from program.updaters.trakt import Updater as Trakt
 
 
 class Content:
@@ -12,48 +12,50 @@ class Content:
     def __init__(
         self,
     ):
-        self.settings = "content_mdblist"
-        self.last_update = 0
+        self.settings = settings_manager.get("content_mdblist")
+        self.updater = Trakt()
+        self.requests_per_2_minutes = self._calculate_request_time()
+        self.rate_limiter = RateLimiter(self.requests_per_2_minutes, 120, True)
 
     def update_items(self, media_items: MediaItemContainer):
         """Fetch media from mdblist and add them to media_items attribute
         if they are not already there"""
-        logger.info("Getting items...")
-        settings = s.get(self.settings)
+        try:
+            with self.rate_limiter:
+                logger.info("Getting items...")
 
-        if (
-            self.last_update == 0
-            or datetime.datetime.now().timestamp() - self.last_update
-            > settings["update_interval"]
-        ):
-            fetched_items = MediaItemContainer()
-            for list_id in settings["lists"]:
-                fetched_items += self._get_items_from_list(list_id, settings["api_key"])
-            added_items = media_items.extend(fetched_items)
-            if len(added_items) > 0:
-                for item in added_items:
-                    logger.debug("Added %s", item.title)
-                logger.info("Found %s new items", len(added_items))
-            self.last_update = datetime.datetime.now().timestamp()
-        logger.info("Done!")
+                items = []
+                for list_id in self.settings["lists"]:
+                    if list_id:
+                        items += self._get_items_from_list(
+                            list_id, self.settings["api_key"]
+                        )
+
+                container = self.updater.create_items(items)
+                added_items = media_items.extend(container)
+                if len(added_items) > 0:
+                    logger.info("Added %s items", len(added_items))
+                logger.info("Done!")
+        except RateLimitExceeded:
+            pass
 
     def _get_items_from_list(self, list_id: str, api_key: str) -> MediaItemContainer:
-        fetched_items = list_items(list_id, api_key)
-        media_item_container = MediaItemContainer()
-        for fetched_item in fetched_items:
-            new_item = {
-                "title": fetched_item.get("title"),
-                "year": fetched_item.get("release_year"),
-                "imdb": fetched_item.get("imdb_id"),
-                "tvdb": fetched_item.get("tvdb_id"),
-                "type": fetched_item.get("mediatype"),
-            }
-            media_item_container.append(MediaItem(new_item, MediaItemState.CONTENT))
-        logger.debug("returned %s", media_item_container)
-        return media_item_container
+        return [item.imdb_id for item in list_items(list_id, api_key)]
+
+    def _calculate_request_time(self):
+        limits = my_limits(self.settings["api_key"]).limits
+        daily_requests = limits.api_requests
+        requests_per_2_minutes = daily_requests / 24 / 60 * 2
+        return requests_per_2_minutes
 
 
 # API METHODS
+
+
+def my_limits(api_key: str):
+    """Wrapper for mdblist api method 'My limits'"""
+    response = get(f"http://www.mdblist.com/api/user?apikey={api_key}")
+    return response.data
 
 
 def list_items(list_id: str, api_key: str):

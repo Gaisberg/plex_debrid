@@ -25,10 +25,12 @@ class RedactSensitiveInfo(logging.Filter):
     def _redact_nested(self, data):
         if isinstance(data, dict):
             redacted_dict = {}
-            for key, _ in data.items():
+            for key, value in data.items():
                 for key2, _ in self.patterns.items():
                     if key in key2:
                         redacted_dict[key] = "REDACTED"
+                        break
+                    redacted_dict[key] = value
             return redacted_dict
         if isinstance(data, list):
             return [self._redact_nested(item) for item in data]
@@ -62,7 +64,9 @@ class Logger(logging.Logger):
             os.mkdir("logs")
 
         self.addFilter(RedactSensitiveInfo())
-        file_handler = logging.FileHandler(os.path.join("logs", file_name), encoding="utf-8")
+        file_handler = logging.FileHandler(
+            os.path.join("logs", file_name), encoding="utf-8"
+        )
         file_handler.setLevel(logging.DEBUG)
         # if settings_manager.get("debug"):
         #     file_handler.setLevel(logging.DEBUG)
@@ -78,3 +82,14 @@ class Logger(logging.Logger):
 
 timestamp = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
 logger = Logger(f"plex_debrid-{timestamp}.log")
+
+
+def log_estimate(items, time_per):
+    """Log the estimated time"""
+    if len(items) > 0:
+        estimate = len(items) * time_per
+        unit = "seconds"
+        if estimate > 60:
+            estimate = estimate / 60
+            unit = "minutes"
+        logger.info("Estimated time to finish %s %s", estimate, unit)

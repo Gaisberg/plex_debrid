@@ -1,216 +1,274 @@
 """Plex library module"""
 import os
+import copy
 from plexapi.server import PlexServer
+from requests.exceptions import ReadTimeout
 from utils.logger import logger
-from utils.request import get, put
 from utils.settings import settings_manager as settings
-from program.media import MediaItem, MediaItemContainer, MediaItemState
-from program.updaters.trakt import Updater as Trakt
+from program.media import (
+    Episode,
+    MediaItemContainer,
+    MediaItemState,
+    Movie,
+    Season,
+    Show,
+)
 
 
 class Library:
     """Plex library class"""
 
     def __init__(self):
-        self.settings = "library_plex"
-        self.class_settings = settings.get(self.settings)
-        self.class_settings["sections"] = self._get_libraries()
+        self.class_settings = settings.get("library_plex")
         self.plex = PlexServer(
-            self.class_settings["address"], self.class_settings["token"]
+            self.class_settings["address"], self.class_settings["token"], timeout=5
         )
-        self.updater = Trakt()
 
-    def get_new_items(self, media_items: MediaItemContainer):
+    def update_items(self, media_items: MediaItemContainer):
         """Update media_items attribute with items in plex library"""
         logger.info("Getting items...")
         added_items = 0
+        items = MediaItemContainer()
         sections = self.plex.library.sections()
         for section in sections:
-            fetched_items = self._get_all_section_items(section)
-            # Do this so that media items doesnt have ghost items from previous runs
-            remove_items = [
-                item
-                for item in media_items
-                if item.state == MediaItemState.LIBRARY
-                and item.type == section.type
-                and item not in fetched_items
-            ]
-            for item in remove_items:
-                media_items.remove(item)
-            added_items += len(media_items.extend(fetched_items))
+            if not section.refreshing:
+                for item in section.all():
+                    items += self._create_item(item)
+        media_items.extend(self.match_items(items, media_items))
+        added_items += len(media_items.extend(items))
         if added_items > 0:
             logger.info("Found %s new items", added_items)
         logger.info("Done!")
 
     def update_sections(self, media_items: MediaItemContainer):
         """Update plex library section"""
-        sections = media_items.get_sections_needing_update(self._get_libraries())
-        if media_items.count(MediaItemState.DOWNLOADING) > 0:
-            for section in sections:
-                self._update_library_section(section)
-                logger.info("%s sections updated", len(sections))
+        for section in self.plex.library.sections():
+            for item in media_items:
+                if item.type == section.type and item.state in [
+                    MediaItemState.DOWNLOADING,
+                    MediaItemState.PARTIALLY_DOWNLOADING,
+                ]:
+                    if not section.refreshing:
+                        section.update()
+                        logger.info("Updated section %s", section.title)
+                        break
 
-    def update_metadata_for_items(self, media_items: MediaItemContainer):
-        """Update plex library item metadata"""
-        for item in media_items:
-            if item.state == MediaItemState.LIBRARY_METADATA:
-                self._update_item_metadata(item)
+    def _create_item(self, item):
+        new_item = _map_item_from_data(item, item.type)
+        if new_item and item.type == "show":
+            for season in item.seasons():
+                if season.seasonNumber != 0:
+                    new_season = _map_item_from_data(season, "season")
+                    if new_season:
+                        for episode in season.episodes():
+                            new_episode = _map_item_from_data(episode, "episode")
+                            if new_episode:
+                                new_season.add_episode(new_episode)
+                        new_item.add_season(new_season)
+        return new_item
 
-    def match_items(self, media_items: MediaItemContainer):
+    def match_items(
+        self, found_items: MediaItemContainer, media_items: MediaItemContainer
+    ):
         """Matches items in given mediacontainer that are not in library
         to items that are in library"""
         logger.info("Matching items...")
 
-        library_items = {}
+        items_to_be_removed = []
+
         for item in media_items:
-            if item.state in [MediaItemState.LIBRARY, MediaItemState.LIBRARY_METADATA]:
-                if item.file_name:
-                    library_items[item.file_name] = item
-
-        movie_key = next(
-            (item.key for item in media_items if item.type == "movie" and item.guid),
-            None,
-        )
-        show_key = next(
-            (item.key for item in media_items if item.type == "show" and item.guid),
-            None,
-        )
-
-        remove_these = []
-        for item in media_items:
-            if item.state is not MediaItemState.LIBRARY:
-                if item.type == "movie":
-                    agent = "tv.plex.agents.movie"
-                    any_key = movie_key
-                else:
-                    agent = "tv.plex.agents.series"
-                    any_key = show_key
-
-                if any_key:
-                    library_item = library_items.get(item.file_name)
-                    if library_item:
-                        guid = self._match(any_key, item, agent)
-                        state = MediaItemState.LIBRARY
-                        if library_item.guid != guid:
-                            state = MediaItemState.LIBRARY_METADATA
-
-                        item.set("guid", guid)
-                        item.set("key", library_item.key)
-                        item.set("file_name", library_item.file_name)
-                        if item.title is None:
-                            item.set("title", library_item.title)
-                        if item.year is None:
-                            item.set("year", library_item.year)
-                        item.change_state(state)
-                        remove_these.append(library_item)
-
-        for item in remove_these:
-            media_items.remove(item)
-        logger.info("Done!")
-
-    def _get_all_section_items(self, section: int) -> MediaItemContainer:
-        items = MediaItemContainer()
-        for item in section.all():
-            new_item = {
-                "guid": item.guid,
-                "key": item.key,
-                "title": item.title,
-                "file_name": next(os.path.basename(file) for file in item.locations),
-                "type": item.type,
-                "imdb": next(
-                    (
-                        guid.id.split("://")[-1]
-                        for guid in item.guids
-                        if "imdb" in guid.id
-                    ),
-                    None,
+            library_item = next(
+                (
+                    library_item
+                    for library_item in found_items
+                    if item.state != MediaItemState.LIBRARY
+                    and (
+                        item.type == "movie"
+                        and library_item.type == "movie"
+                        and item.file_name == library_item.file_name
+                        or item.type == "show"
+                        and library_item.type == "show"
+                        and any(
+                            location in item.locations
+                            for location in library_item.locations
+                        )
+                        or item.imdb_id == library_item.imdb_id
+                    )
                 ),
-            }
-            if new_item["type"] == "movie":
-                new_item["tmdb"] = next(
-                    (
-                        guid.id.split("://")[-1]
-                        for guid in item.guids
-                        if "tmdb" in guid.id
-                    ),
-                    None,
-                )
-            else:
-                new_item["tvdb"] = next(
-                    (
-                        guid.id.split("://")[-1]
-                        for guid in item.guids
-                        if "tvdb" in guid.id
-                    ),
-                    None,
-                )
-            items.append(MediaItem(new_item, MediaItemState.LIBRARY))
-        return items
-
-    def _get_libraries(self):
-        """Wrapper for plex api get libraries method"""
-        response = get(
-            self.class_settings["address"]
-            + "/library/sections/?X-Plex-Token="
-            + self.class_settings["token"]
-        )
-
-        sections = {}
-        if response.is_ok:
-            for section in response.data["MediaContainer"]["Directory"]:
-                sections[section["key"]] = {
-                    "title": section["title"],
-                    "type": section["type"],
-                    "refreshing": section["refreshing"],
-                }
-        return sections
-
-    def _update_library_section(self, section):
-        """Update plex library section"""
-        response = get(
-            self.class_settings["address"]
-            + "/library/sections/"
-            + section
-            + "/refresh"
-            + "?X-Plex-Token="
-            + self.class_settings["token"]
-        )
-        if response.is_ok:
-            logger.debug(
-                "Section %s updated",
-                section,
+                None,
             )
 
-    def _update_item_metadata(self, item):
-        """Update plex library item metadata"""
-        url = (
-            self.class_settings["address"] + item.key + "/match?" + f"guid={item.guid}"
-        )
-        if "title" in item:
-            url += f"&name={item.title}"
-        if "year" in item:
-            url += f"&year={item.year}"
-        url += "&X-Plex-Token=" + self.class_settings["token"]
-        response = put(url)
-        if response.is_ok:
-            logger.debug("Item '%s' metadata updated", item.title)
+            if library_item:
+                if self._fix_match(library_item, item):
+                    items_to_be_removed.append(library_item)
 
-    def _match(self, any_key, item, agent):
-        """Get matches for plex item"""
-        for key, value in item.ids.items():
-            if value is not None and key in ["imdb", "tmdb", "tvdb"]:
-                match = get(
-                    self.class_settings["address"]
-                    + any_key
-                    + f"/matches?manual=1&title={key}-{value}"
-                    + f"&agent={agent}&language=en-US&X-Plex-Token="
-                    + self.class_settings["token"]
+                self._update_item(item, library_item)
+
+                items_to_be_removed.append(library_item)
+
+        for item in items_to_be_removed:
+            found_items.remove(item)
+
+        for item in found_items:
+            if item in media_items:
+                if item.state == MediaItemState.DOWNLOADING:
+                    logger.debug(
+                        "Could not match library item %s to any media item", item.title
+                    )
+                    # media_items.change_state(MediaItemState.ERROR)
+
+        logger.info("Done!")
+        return found_items
+
+    def _update_item(self, item, library_item):
+        """Internal method to use with match_items
+        It does some magic to update media items according to library
+        items found"""
+        if item.type == "show":
+            # library_season_numbers = [s.number for s in library_item.seasons]
+            # item_season_numbers = [s.number for s in item.seasons]
+
+            # # Check if any season from item is missing in library_item
+            # missing_seasons = [
+            #     s for s in item_season_numbers if s not in library_season_numbers
+            # ]
+            # if missing_seasons:
+            #     state = MediaItemState.LIBRARY_ONGOING
+
+            for season_index, season in enumerate(item.seasons):
+                matching_library_season = next(
+                    (s for s in library_item.seasons if s == season),
+                    None,
                 )
-                if match.is_ok:
-                    if "MediaContainer" in match.data:
-                        if "SearchResult" in match.data["MediaContainer"]:
-                            if len(match.data["MediaContainer"]["SearchResult"]) > 0:
-                                return match.data["MediaContainer"]["SearchResult"][0][
-                                    "guid"
-                                ]
+
+                if (
+                    not matching_library_season
+                ):  # if there's no matching season in the library item
+                    continue
+
+                # If the current item season has fewer or
+                # same episodes as the library item season, replace it
+                if len(season.episodes) <= len(matching_library_season.episodes):
+                    item.seasons[season_index] = matching_library_season
+                else:  # If not, we need to check each episode
+                    for episode in season.episodes:
+                        matching_library_episode = next(
+                            (
+                                e
+                                for e in matching_library_season.episodes
+                                if str(episode.number) in e.get_multi_episode_numbers()
+                                or e == episode
+                            ),
+                            None,
+                        )
+
+                        # Replace the episode in item with the one from library_item
+                        if matching_library_episode:
+                            true_episode_number = episode.number
+                            # matching_library_episode.number = episode.number
+                            episode_index = season.episodes.index(episode)
+                            season.episodes[episode_index] = copy.copy(
+                                matching_library_episode
+                            )
+                            season.episodes[episode_index].number = true_episode_number
+                            continue
+                        # if the episode is not in library item season, change its state
+                        else:
+                            pass
+                            # season.change_state(MediaItemState.LIBRARY_ONGOING)
+                            # state = MediaItemState.LIBRARY_ONGOING
+
+        if item.type == "movie":
+            item.set("file_name", library_item.file_name)
+        else:
+            item.set("locations", library_item.locations)
+        item.set("guid", library_item.guid)
+        item.set("key", library_item.key)
+        item.set("art_url", library_item.art_url)
+
+    def _fix_match(self, library_item, item):
+        """Internal method to use in match_items method.
+        It gets plex guid and checks if it matches with plex metadata
+        for given imdb_id. If it does, it will update the metadata of the plex item."""
+        section = next(
+            section
+            for section in self.plex.library.sections()
+            if section.type == item.type
+        )
+        dummy = section.search(maxresults=1)[0]
+
+        if dummy and not section.refreshing:
+            if item.imdb_id:
+                try:
+                    match = dummy.matches(agent=section.agent, title=item.imdb_id)[0]
+                except ReadTimeout:
+                    return False
+                except IndexError:
+                    return False
+                if library_item.guid != match.guid:
+                    item_to_update = self.plex.fetchItem(library_item.key)
+                    item_to_update.fixMatch(match)
+                    return True
+        return False
+
+
+def _map_item_from_data(item, item_type):
+    """Map plex API data to MediaItemContainer"""
+    # Fetch all data from plex API and catch ReadTimeout
+    try:
+        item_type = getattr(item, "type", None)
+        guid = getattr(item, "guid", None)
+        genres = getattr(item, "genres", {})
+        available_at = getattr(item, "originallyAvailableAt", None)
+        title = getattr(item, "title", None)
+        year = getattr(item, "year", None)
+        if item_type in ["movie", "show"]:
+            guids = getattr(item, "guids", [])
+        else:
+            guids = []
+        key = getattr(item, "key", None)
+        locations = getattr(item, "locations", [])
+        season_number = getattr(item, "seasonNumber", None)
+        episode_number = getattr(item, "episodeNumber", None)
+        art_url = getattr(item, "artUrl", None)
+    except ReadTimeout:
         return None
+    imdb_id = None
+    if item_type in ["movie", "show"]:
+        imdb_id = next(
+            (guid.id.split("://")[-1] for guid in guids if "imdb" in guid.id), None
+        )
+        genres = [genre.tag for genre in genres] or None
+    aired_at = None
+    if available_at:
+        aired_at = available_at.strftime("%Y-%m-%d:%H")
+    item = {
+        "state": MediaItemState.LIBRARY,
+        "title": title,
+        "year": year,
+        "imdb_id": imdb_id,
+        "aired_at": aired_at,
+        "genres": genres,
+        "guid": guid,
+        "key": key,
+        "art_url": art_url,
+    }
+    match item_type:
+        case "movie":
+            item["file_name"] = os.path.basename(locations[0])
+            return_item = Movie(item)
+        case "show":
+            item["locations"] = [
+                location.split("shows\\")[-1] for location in locations
+            ]
+            return_item = Show(item)
+        case "season":
+            item["number"] = season_number
+            return_item = Season(item)
+        case "episode":
+            item["number"] = episode_number
+            item["file_name"] = os.path.basename(locations[0])
+            return_item = Episode(item)
+        case _:
+            return_item = None
+    return return_item

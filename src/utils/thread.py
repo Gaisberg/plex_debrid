@@ -1,6 +1,7 @@
 """Threading helper"""
 import threading
 import time
+from pathos.multiprocessing import Pool
 
 
 class ThreadRunner:
@@ -37,3 +38,17 @@ class ThreadRunner:
     def join(self):
         """Joins the thread"""
         return self.thread.join()
+
+
+def split_and_execute_in_parallel(lst, method):
+    # Define the minimum number of items in each sublist
+    MIN_ITEMS = 20
+
+    # Split list into sublists with at least MIN_ITEMS
+    sublists = [lst[i: i + MIN_ITEMS] for i in range(0, len(lst), MIN_ITEMS)]
+
+    # Use a Pool of processes
+    pool = Pool()
+    results = pool.map(method, sublists)
+
+    return results

@@ -6,6 +6,8 @@ import sys
 from utils.logger import logger
 from program.media import MediaItemContainer
 from program.libraries.plex import Library as Plex
+from program.debrid.realdebrid import Debrid as RealDebrid
+from program.scrapers.torrentio import Scraper as Torrentio
 
 
 class Program:
@@ -13,6 +15,8 @@ class Program:
 
     def __init__(self):
         self.plex = Plex()
+        self.debrid = RealDebrid()
+        self.torrentio = Torrentio()
 
         self.media_items = MediaItemContainer()
 
@@ -28,19 +32,15 @@ class Program:
         self.media_items.load("data/media.pkl")
 
         self.plex.update_sections(self.media_items)
-        self.plex.update_metadata_for_items(self.media_items)
-        self.plex.get_new_items(self.media_items)
 
         # Update content lists
         for content_service in self.content_services:
             content_service.update_items(self.media_items)
 
-        self.plex.match_items(self.media_items)
+        self.plex.update_items(self.media_items)
 
-        for scraper in self.scraping_services:
-            scraper.scrape(self.media_items)
-        for debrid in self.debrid_services:
-            debrid.download(self.media_items)
+        self.torrentio.scrape(self.media_items)
+        self.debrid.download(self.media_items)
 
         self.media_items.save("data/media.pkl")
 
@@ -58,7 +58,7 @@ class Program:
             )
             sys.modules[module_name] = module
             clsmembers = inspect.getmembers(module, inspect.isclass)
-            wanted_classes = ["Library", "Content", "Scraper", "Debrid"]
+            wanted_classes = ["Content"]
             for name, obj in clsmembers:
                 if name in wanted_classes:
                     module = obj()
