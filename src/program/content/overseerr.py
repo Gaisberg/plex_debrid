@@ -12,7 +12,7 @@ class Content:
     def __init__(
         self,
     ):
-        self.settings = settings_manager.get("content_overseerr")
+        self.settings = settings_manager.get("overseerr")
         self.updater = Trakt()
         self.not_found_ids = []
 

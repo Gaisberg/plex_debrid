@@ -19,7 +19,7 @@ class Library:
     """Plex library class"""
 
     def __init__(self):
-        self.class_settings = settings.get("library_plex")
+        self.class_settings = settings.get("plex")
         self.plex = PlexServer(
             self.class_settings["address"], self.class_settings["token"], timeout=5
         )
@@ -77,6 +77,8 @@ class Library:
         items_to_be_removed = []
 
         for item in media_items:
+            if not item:
+                continue
             library_item = next(
                 (
                     library_item

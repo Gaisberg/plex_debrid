@@ -12,7 +12,7 @@ class Content:
     def __init__(
         self,
     ):
-        self.settings = settings_manager.get("content_mdblist")
+        self.settings = settings_manager.get("mdblist")
         self.updater = Trakt()
         self.requests_per_2_minutes = self._calculate_request_time()
         self.rate_limiter = RateLimiter(self.requests_per_2_minutes, 120, True)

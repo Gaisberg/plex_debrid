@@ -16,7 +16,7 @@ class Scraper:
     """Scraper for torrentio"""
 
     def __init__(self):
-        self.settings = "scraper_torrentio"
+        self.settings = "torrentio"
         self.class_settings = settings_manager.get(self.settings)
         self.last_scrape = 0
         self.filters = (

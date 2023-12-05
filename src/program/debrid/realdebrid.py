@@ -15,7 +15,7 @@ class Debrid:  # TODO CHECK TORRENTS LIST BEFORE DOWNLOAD, IF DOWNLOADED AND NOT
     """Real-debrid.com debrider"""
 
     def __init__(self):
-        self.settings = settings_manager.get("debrid_realdebrid")
+        self.settings = settings_manager.get("realdebrid")
         self.auth_headers = {"Authorization": f'Bearer {self.settings["api_key"]}'}
         self._torrents = {}
 
